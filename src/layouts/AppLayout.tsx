@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { LayoutDashboard, Server, ShieldCheck, Globe, Database, Terminal, Bell, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import UserMenu from '../components/auth/UserMenu';
 
 type NavItem = {
   to: string;
@@ -59,9 +60,14 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 p-10 overflow-y-auto">
-        <Outlet />
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-end px-6 py-3 border-b border-gray-900 shrink-0">
+          <UserMenu />
+        </div>
+        <main className="flex-1 p-10 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

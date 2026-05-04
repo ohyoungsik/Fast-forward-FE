@@ -1,5 +1,5 @@
 import { api } from './client';
-import { setTokens, clearTokens, type AuthTokens } from '../auth/tokenStorage';
+import { setTokens, clearTokens, getRefreshToken, type AuthTokens } from '../auth/tokenStorage';
 
 export type LoginRequest = {
   username: string;
@@ -18,9 +18,15 @@ export type SignupRequest = {
   password: string;
 };
 
+export type MeResponse = {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+};
+
 export async function login(payload: LoginRequest) {
   const res = await api.post<LoginResponse>('/auth/login', payload, {
-    // do not attach stale token if any
     headers: { 'X-Skip-Auth': '1' },
   });
   const tokens: AuthTokens = { accessToken: res.data.accessToken, refreshToken: res.data.refreshToken };
@@ -35,7 +41,20 @@ export async function signup(payload: SignupRequest) {
   return res.data;
 }
 
-export function logout() {
+export async function getMe(): Promise<MeResponse> {
+  const res = await api.get<MeResponse>('/auth/me');
+  return res.data;
+}
+
+export async function logout(): Promise<void> {
+  const refreshToken = getRefreshToken();
+  if (refreshToken) {
+    try {
+      await api.post('/auth/logout', { refreshToken });
+    } catch {
+      // 토큰이 만료됐거나 이미 무효화된 경우에도 로컬 토큰은 삭제
+    }
+  }
   clearTokens();
 }
 
