@@ -50,14 +50,14 @@ export default function AppLayout() {
           ))}
         </nav>
 
-        <div className="border-t border-gray-900 pt-9 flex flex-col space-y-2">
+        {/* <div className="border-t border-gray-900 pt-9 flex flex-col space-y-2">
           <button className="flex items-center gap-3 hover:text-white text-sm p-3 rounded-lg hover:bg-gray-900/40 transition-colors">
             <Bell size={18} /> 알림
           </button>
           <button className="flex items-center gap-3 hover:text-white text-sm p-3 rounded-lg hover:bg-gray-900/40 transition-colors">
             <Settings size={18} /> 설정
           </button>
-        </div>
+        </div> */}
       </aside>
 
       <div className="flex-1 flex flex-col overflow-hidden">

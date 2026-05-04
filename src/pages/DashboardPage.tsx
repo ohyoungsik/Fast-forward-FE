@@ -1,31 +1,72 @@
 import { useEffect, useState } from 'react';
-import { Bell, Info, Search } from 'lucide-react';
+import { Bell, Loader2, Search } from 'lucide-react';
 
 import StatusCard from '../components/dashboard/StatusCard';
 import InfraChart from '../components/dashboard/InfraChart';
 import NginxLogChart from '../components/dashboard/NginxLogChart';
 import LogStream from '../components/dashboard/LogStream';
-import { initialStatusCards, initialNginxData, initialLogs, generateRealTimeData } from '../constants/mockData';
+import ServerDropdown from '../components/ServerDropdown';
+import { initialStatusCards, initialNginxData, initialLogs } from '../constants/mockData';
+import { getMetrics } from '../api/metrics';
+import { SERVERS, type ServerName, type MetricsResponse } from '../types/metrics';
 import type { InfraMetricData } from '../types/dashboard';
-import { getLogs } from '../api/logs';
+
+function formatNetwork(bytesPerSec: number): { value: string; unit: string } {
+  if (bytesPerSec >= 1e9) return { value: (bytesPerSec / 1e9).toFixed(1), unit: 'GB/s' };
+  if (bytesPerSec >= 1e6) return { value: (bytesPerSec / 1e6).toFixed(1), unit: 'MB/s' };
+  if (bytesPerSec >= 1e3) return { value: (bytesPerSec / 1e3).toFixed(1), unit: 'KB/s' };
+  return { value: bytesPerSec.toFixed(0), unit: 'B/s' };
+}
+
+function nowTimestamp() {
+  const now = new Date();
+  return `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+}
 
 export default function DashboardPage() {
-  const [infraData, setInfraData] = useState<InfraMetricData[]>(() =>
-    Array.from({ length: 10 }, (_, i) => ({
-      time: `10:${String(10 + i).padStart(2, '0')}`,
-      cpu: 20 + Math.random() * 30,
-      memory: 40 + Math.random() * 10,
-      disk: 62.1,
-    })),
-  );
+  const [selectedServer, setSelectedServer] = useState<ServerName>(SERVERS[0]);
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
+  const [infraData, setInfraData] = useState<InfraMetricData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [logStream, setLogStream] = useState(initialLogs);
 
   useEffect(() => {
-    const infraInterval = setInterval(() => {
-      setInfraData((prev) => generateRealTimeData(prev));
-    }, 5000);
+    setInfraData([]);
+    setMetrics(null);
+    setError(null);
 
-    const logInterval = setInterval(() => {
+    let cancelled = false;
+
+    const fetchAndUpdate = async () => {
+      if (!cancelled) setIsLoading(true);
+      try {
+        const data = await getMetrics(selectedServer);
+        if (cancelled) return;
+        setMetrics(data);
+        setInfraData((prev) => {
+          const next = [...prev, { time: nowTimestamp(), cpu: data.cpu, memory: data.memory, disk: data.disk }];
+          return next.length > 15 ? next.slice(-15) : next;
+        });
+        setError(null);
+      } catch {
+        if (!cancelled) setError('메트릭 조회 실패. 서버 연결을 확인하세요.');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    fetchAndUpdate();
+    const id = setInterval(fetchAndUpdate, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [selectedServer]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
       const now = new Date();
       const newLog = {
         id: Date.now(),
@@ -35,26 +76,12 @@ export default function DashboardPage() {
       };
       setLogStream((prev) => [newLog, ...prev.slice(0, 15)]);
     }, 10000);
-
-    return () => {
-      clearInterval(infraInterval);
-      clearInterval(logInterval);
-    };
+    return () => clearInterval(id);
   }, []);
-
-  useEffect(()=>{
-     getLogs()
-      .then((res) => {
-        console.log(' res ', res)
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  },[])
 
   return (
     <>
-      <header className="flex flex-col gap-5 md:flex-row md:justify-between md:items-center mb-10 pb-6 border-b border-gray-900">
+      <header className="flex flex-col gap-5 md:flex-row md:justify-between md:items-center mb-6 pb-6 border-b border-gray-900">
         <div>
           <h2 className="text-3xl font-extrabold text-white tracking-tight">
             통합 모니터링 대시보드 <span className="text-green-500 text-sm ml-3 font-semibold">● 실시간</span>
@@ -72,11 +99,34 @@ export default function DashboardPage() {
         </div>
       </header>
 
+      <div className="flex items-center gap-4 mb-8">
+        <ServerDropdown value={selectedServer} onChange={setSelectedServer} />
+        {isLoading && (
+          <span className="flex items-center gap-1.5 text-xs text-gray-500">
+            <Loader2 size={13} className="animate-spin" /> 데이터 갱신 중...
+          </span>
+        )}
+        {error && !isLoading && (
+          <span className="text-xs text-red-400 bg-red-950/30 border border-red-900/30 px-3 py-1.5 rounded-lg">
+            {error}
+          </span>
+        )}
+      </div>
+
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-5 mb-10">
         {initialStatusCards.map((card, index) => {
-          if (index === 1) card.value = Math.round(infraData[infraData.length - 1]?.cpu || 0);
-          if (index === 2) card.value = Math.round(infraData[infraData.length - 1]?.memory || 0);
-          return <StatusCard key={index} {...card} />;
+          const overrides: { value?: string | number; unit?: string } = {};
+          if (metrics) {
+            if (index === 1) overrides.value = metrics.cpu.toFixed(1);
+            if (index === 2) overrides.value = metrics.memory.toFixed(1);
+            if (index === 3) overrides.value = metrics.disk.toFixed(1);
+            if (index === 4) {
+              const net = formatNetwork(metrics.network);
+              overrides.value = net.value;
+              overrides.unit = net.unit;
+            }
+          }
+          return <StatusCard key={index} {...card} {...overrides} />;
         })}
       </section>
 
@@ -90,7 +140,13 @@ export default function DashboardPage() {
               <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
             </div>
           </div>
-          <InfraChart data={infraData} />
+          {infraData.length === 0 && !error ? (
+            <div className="flex items-center justify-center h-[280px] text-gray-600 text-sm">
+              <Loader2 size={20} className="animate-spin mr-2" /> 데이터 수집 중...
+            </div>
+          ) : (
+            <InfraChart data={infraData} />
+          )}
         </div>
 
         <div className="lg:col-span-4 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
@@ -112,7 +168,7 @@ export default function DashboardPage() {
 
         <div className="lg:col-span-6 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
           <h3 className="font-extrabold text-lg tracking-tight mb-6 flex justify-between items-center">
-            실시간 로그 스트림 (요약) <Info size={16} className="text-gray-600" />
+            실시간 로그 스트림 (요약)
           </h3>
           <LogStream logs={logStream} />
         </div>
@@ -134,4 +190,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
