@@ -7,20 +7,20 @@ import NginxLogChart from '../components/dashboard/NginxLogChart';
 import LogStream from '../components/dashboard/LogStream';
 import { initialStatusCards, initialNginxData, initialLogs, generateRealTimeData } from '../constants/mockData';
 import type { InfraMetricData } from '../types/dashboard';
+import { getLogs } from '../api/logs';
 
 export default function DashboardPage() {
-  const [infraData, setInfraData] = useState<InfraMetricData[]>([]);
-  const [logStream, setLogStream] = useState(initialLogs);
-
-  useEffect(() => {
-    const initialInfra: InfraMetricData[] = Array.from({ length: 10 }, (_, i) => ({
+  const [infraData, setInfraData] = useState<InfraMetricData[]>(() =>
+    Array.from({ length: 10 }, (_, i) => ({
       time: `10:${String(10 + i).padStart(2, '0')}`,
       cpu: 20 + Math.random() * 30,
       memory: 40 + Math.random() * 10,
       disk: 62.1,
-    }));
-    setInfraData(initialInfra);
+    })),
+  );
+  const [logStream, setLogStream] = useState(initialLogs);
 
+  useEffect(() => {
     const infraInterval = setInterval(() => {
       setInfraData((prev) => generateRealTimeData(prev));
     }, 5000);
@@ -41,6 +41,16 @@ export default function DashboardPage() {
       clearInterval(logInterval);
     };
   }, []);
+
+  useEffect(()=>{
+     getLogs()
+      .then((res) => {
+        console.log(' res ', res)
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  },[])
 
   return (
     <>
