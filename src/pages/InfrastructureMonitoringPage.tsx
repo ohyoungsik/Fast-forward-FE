@@ -6,9 +6,8 @@ import { SearchBar } from '../components/ui/SearchBar';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import ServerDropdown from '../components/ServerDropdown';
-import { mockInfraRows } from '../constants/mockPages';
-import { getMetrics } from '../api/metrics';
-import { SERVERS, type ServerName, type MetricsResponse } from '../types/metrics';
+import { getMetrics, getMetricsHistory } from '../api/metrics';
+import type { MetricsResponse, MetricsHistoryPoint } from '../types/metrics';
 import type { InfraRow } from '../types/logs';
 
 function infraStatusBadge(status: InfraRow['status']) {
@@ -17,25 +16,51 @@ function infraStatusBadge(status: InfraRow['status']) {
   return <Badge variant="CRITICAL">CRITICAL</Badge>;
 }
 
+function deriveStatus(cpu: number, memory: number, disk: number): InfraRow['status'] {
+  if (cpu >= 90 || memory >= 90 || disk >= 90) return 'critical';
+  if (cpu >= 70 || memory >= 70 || disk >= 70) return 'degraded';
+  return 'healthy';
+}
+
+let rowId = 1;
+
 export default function InfrastructureMonitoringPage() {
   const [query, setQuery] = useState('');
-  const [selectedServer, setSelectedServer] = useState<ServerName>(SERVERS[0]);
+  const [selectedServer, setSelectedServer] = useState<string>('');
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
+  const [historyRows, setHistoryRows] = useState<InfraRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!selectedServer) return;
+
     setMetrics(null);
+    setHistoryRows([]);
     setError(null);
 
     let cancelled = false;
 
-    const fetchAndUpdate = async () => {
+    const fetchAll = async () => {
       if (!cancelled) setIsLoading(true);
       try {
-        const data = await getMetrics(selectedServer);
+        const [latest, history] = await Promise.all([
+          getMetrics(selectedServer),
+          getMetricsHistory(selectedServer, 30),
+        ]);
         if (cancelled) return;
-        setMetrics(data);
+        setMetrics(latest);
+        setHistoryRows(
+          history.map((p: MetricsHistoryPoint) => ({
+            id: rowId++,
+            timestamp: p.time,
+            host: selectedServer,
+            cpu: parseFloat(p.cpu.toFixed(1)),
+            memory: parseFloat(p.memory.toFixed(1)),
+            disk: parseFloat(p.disk.toFixed(1)),
+            status: deriveStatus(p.cpu, p.memory, p.disk),
+          })),
+        );
         setError(null);
       } catch {
         if (!cancelled) setError('메트릭 조회 실패');
@@ -44,8 +69,8 @@ export default function InfrastructureMonitoringPage() {
       }
     };
 
-    fetchAndUpdate();
-    const id = setInterval(fetchAndUpdate, 5000);
+    fetchAll();
+    const id = setInterval(fetchAll, 5000);
 
     return () => {
       cancelled = true;
@@ -55,17 +80,12 @@ export default function InfrastructureMonitoringPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return mockInfraRows;
-    return mockInfraRows.filter((r) => {
+    if (!q) return historyRows;
+    return historyRows.filter((r) => {
       const hay = `${r.timestamp} ${r.host} ${r.status} cpu:${r.cpu} mem:${r.memory} disk:${r.disk}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [query]);
-
-  const hostCount = useMemo(
-    () => new Set(filtered.map((r) => r.host)).size,
-    [filtered],
-  );
+  }, [query, historyRows]);
 
   const columns: Column<InfraRow>[] = [
     { key: 'timestamp', header: 'Timestamp', cell: (r) => <span className="text-gray-400 font-mono">{r.timestamp}</span>, className: 'whitespace-nowrap' },
@@ -76,9 +96,9 @@ export default function InfrastructureMonitoringPage() {
     { key: 'disk', header: 'Disk', cell: (r) => `${r.disk}%`, className: 'whitespace-nowrap' },
   ];
 
-  const cpuValue = metrics ? metrics.cpu.toFixed(1) : '—';
-  const memValue = metrics ? metrics.memory.toFixed(1) : '—';
-  const diskValue = metrics ? metrics.disk.toFixed(1) : '—';
+  const cpuValue = metrics ? metrics.cpu_usage.toFixed(1) : '—';
+  const memValue = metrics ? metrics.memory_usage.toFixed(1) : '—';
+  const diskValue = metrics ? metrics.disk_usage.toFixed(1) : '—';
 
   return (
     <div className="space-y-8">
@@ -137,17 +157,27 @@ export default function InfrastructureMonitoringPage() {
         <Card className="p-5 rounded-2xl flex items-center gap-4">
           <div className="p-4 rounded-xl bg-blue-950 text-blue-500"><Server /></div>
           <div>
-            <p className="text-gray-500 text-sm font-medium">관측 호스트</p>
+            <p className="text-gray-500 text-sm font-medium">수집 데이터</p>
             <p className="text-3xl font-extrabold text-white tracking-tight">
-              {hostCount}<span className="text-base ml-1 font-medium text-gray-400">대</span>
+              {historyRows.length}<span className="text-base ml-1 font-medium text-gray-400">건</span>
             </p>
           </div>
         </Card>
       </section>
 
       <Card>
-        <CardHeader title="호스트 상태 리스트" description="검색 입력 시 실시간 필터링됩니다." right={<div className="text-xs text-gray-500">rows: {filtered.length}</div>} />
-        <DataTable columns={columns} rows={filtered} />
+        <CardHeader
+          title="호스트 상태 리스트"
+          description="검색 입력 시 실시간 필터링됩니다."
+          right={<div className="text-xs text-gray-500">rows: {filtered.length}</div>}
+        />
+        {filtered.length === 0 && !isLoading ? (
+          <div className="flex items-center justify-center h-32 text-gray-600 text-sm">
+            {selectedServer ? '수집된 데이터가 없습니다.' : '서버를 선택해 주세요.'}
+          </div>
+        ) : (
+          <DataTable columns={columns} rows={filtered} />
+        )}
       </Card>
     </div>
   );

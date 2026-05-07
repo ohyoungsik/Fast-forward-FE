@@ -8,7 +8,7 @@ import LogStream from '../components/dashboard/LogStream';
 import ServerDropdown from '../components/ServerDropdown';
 import { initialStatusCards, initialNginxData, initialLogs } from '../constants/mockData';
 import { getMetrics } from '../api/metrics';
-import { SERVERS, type ServerName, type MetricsResponse } from '../types/metrics';
+import type { MetricsResponse } from '../types/metrics';
 import type { InfraMetricData } from '../types/dashboard';
 
 function formatNetwork(bytesPerSec: number): { value: string; unit: string } {
@@ -24,7 +24,7 @@ function nowTimestamp() {
 }
 
 export default function DashboardPage() {
-  const [selectedServer, setSelectedServer] = useState<ServerName>(SERVERS[0]);
+  const [selectedServer, setSelectedServer] = useState<string>('');
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [infraData, setInfraData] = useState<InfraMetricData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +32,8 @@ export default function DashboardPage() {
   const [logStream, setLogStream] = useState(initialLogs);
 
   useEffect(() => {
+    if (!selectedServer) return;
+
     setInfraData([]);
     setMetrics(null);
     setError(null);
@@ -45,7 +47,7 @@ export default function DashboardPage() {
         if (cancelled) return;
         setMetrics(data);
         setInfraData((prev) => {
-          const next = [...prev, { time: nowTimestamp(), cpu: data.cpu, memory: data.memory, disk: data.disk }];
+          const next = [...prev, { time: nowTimestamp(), cpu: data.cpu_usage, memory: data.memory_usage, disk: data.disk_usage }];
           return next.length > 15 ? next.slice(-15) : next;
         });
         setError(null);
@@ -117,11 +119,11 @@ export default function DashboardPage() {
         {initialStatusCards.map((card, index) => {
           const overrides: { value?: string | number; unit?: string } = {};
           if (metrics) {
-            if (index === 1) overrides.value = metrics.cpu.toFixed(1);
-            if (index === 2) overrides.value = metrics.memory.toFixed(1);
-            if (index === 3) overrides.value = metrics.disk.toFixed(1);
+            if (index === 1) overrides.value = metrics.cpu_usage.toFixed(1);
+            if (index === 2) overrides.value = metrics.memory_usage.toFixed(1);
+            if (index === 3) overrides.value = metrics.disk_usage.toFixed(1);
             if (index === 4) {
-              const net = formatNetwork(metrics.network);
+              const net = formatNetwork(metrics.network_rx + metrics.network_tx);
               overrides.value = net.value;
               overrides.unit = net.unit;
             }
