@@ -1,0 +1,31 @@
+name: api를 aws linux에 배포하기
+
+on:
+  push:
+    branches: ["dev"] # dev 브렌치에 push될 때 아래의 job 실행
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ssh 원격 명령
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          port: 22
+          script: |
+            cd ~/fornt-test
+            git fetch another dev
+            git checkout dev
+            git pull another dev
+            npm install
+            npm run build
+            pm2 restart app || pm2 start npm --name "app" -- run start
+            # source venv39/bin/activate
+            # pip install --upgrade pip
+            # pip install -r requirements.txt
+            # sudo systemctl restart fastapi
+            # fuser -k 8000/tcp || true
+            # nohup python3.9 -m uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
