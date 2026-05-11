@@ -15,7 +15,7 @@ const navItems: NavItem[] = [
   { to: '/access-security-logs', label: '접근 보안 로그', icon: <ShieldCheck size={18} /> },
   { to: '/webapp-logs', label: 'Web Application 로그', icon: <Globe size={18} /> },
   { to: '/nginx-logs', label: 'Nginx 로그', icon: <Database size={18} /> },
-  { to: '/kernel-logs', label: '커널 로그', icon: <Terminal size={18} /> },
+  // { to: '/kernel-logs', label: '커널 로그', icon: <Terminal size={18} /> },
 ];
 
 function NavItemLink({ to, label, icon }: NavItem) {
