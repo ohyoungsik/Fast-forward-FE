@@ -17,12 +17,9 @@ jobs:
           port: 22
           script: |
             cd ~/fornt-test
-            git fetch another dev
-            git checkout dev
             git pull another dev
             npm install
-            npm run build
-            pm2 restart app || pm2 start npm --name "app" -- run start
+            npm run dev
             # source venv39/bin/activate
             # pip install --upgrade pip
             # pip install -r requirements.txt
