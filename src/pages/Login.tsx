@@ -166,7 +166,7 @@ export default function Login() {
         <Card className="p-0 overflow-hidden">
           <div className="p-7">
             <CardHeader
-              title="계정으로 로그인 테스트중^^"
+              title="계정으로 로그인"
               description="아이디와 비밀번호를 입력하세요."
               // right={<span className="text-xs text-gray-500">JWT 인증</span>}
             />
