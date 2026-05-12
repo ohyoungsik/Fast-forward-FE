@@ -1,15 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Bell, Loader2, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import StatusCard from '../components/dashboard/StatusCard';
 import InfraChart from '../components/dashboard/InfraChart';
 import NginxLogChart from '../components/dashboard/NginxLogChart';
 import LogStream from '../components/dashboard/LogStream';
 import ServerDropdown from '../components/ServerDropdown';
-import { initialStatusCards, initialNginxData, initialLogs } from '../constants/mockData';
+import { initialStatusCards, initialNginxData } from '../constants/mockData';
 import { getMetrics } from '../api/metrics';
+import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
 import type { MetricsResponse } from '../types/metrics';
 import type { InfraMetricData } from '../types/dashboard';
+
+const LEVEL_COLOR: Record<string, string> = {
+  INFO: 'text-blue-400',
+  WARN: 'text-yellow-400',
+  ERROR: 'text-red-400',
+  CRITICAL: 'text-red-600',
+};
 
 function formatNetwork(bytesPerSec: number): { value: string; unit: string } {
   if (bytesPerSec >= 1e9) return { value: (bytesPerSec / 1e9).toFixed(1), unit: 'GB/s' };
@@ -29,7 +38,7 @@ export default function DashboardPage() {
   const [infraData, setInfraData] = useState<InfraMetricData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [logStream, setLogStream] = useState(initialLogs);
+  const [webappLogs, setWebappLogs] = useState<AppLogItem[]>([]);
 
   useEffect(() => {
     if (!selectedServer) return;
@@ -68,16 +77,13 @@ export default function DashboardPage() {
   }, [selectedServer]);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      const now = new Date();
-      const newLog = {
-        id: Date.now(),
-        timestamp: `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`,
-        level: (Math.random() > 0.3 ? 'INFO' : 'WARN') as 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL',
-        message: 'sudo: user as: TTY=pts/0; PWD=/home/user; USER=root; COMMAND=/bin/systemctl restart nginx',
-      };
-      setLogStream((prev) => [newLog, ...prev.slice(0, 15)]);
-    }, 10000);
+    const fetchLogs = () => {
+      getWebappLogs({ limit: 15 })
+        .then((data) => setWebappLogs(data))
+        .catch(() => {});
+    };
+    fetchLogs();
+    const id = setInterval(fetchLogs, 15000);
     return () => clearInterval(id);
   }, []);
 
@@ -157,8 +163,24 @@ export default function DashboardPage() {
         </div>
 
         <div className="lg:col-span-4 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
-          <h3 className="font-extrabold text-lg tracking-tight mb-6">Web Application 로그</h3>
-          <div className="text-gray-500 text-sm flex items-center justify-center h-[280px]">구현 생략 (step 차트)</div>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-extrabold text-lg tracking-tight">Web Application 로그</h3>
+            <Link to="/webapp-logs" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">전체 보기 →</Link>
+          </div>
+          {webappLogs.length === 0 ? (
+            <div className="flex items-center justify-center h-[260px] text-gray-600 text-sm">수집된 로그가 없습니다.</div>
+          ) : (
+            <div className="space-y-2.5 overflow-hidden h-[260px] font-mono text-xs">
+              {webappLogs.map((log) => (
+                <div key={log.id} className="grid grid-cols-[80px_48px_36px_1fr] gap-2 items-start">
+                  <span className="text-gray-600 whitespace-nowrap">{log.collected_at.slice(11, 19)}</span>
+                  <span className={`${LEVEL_COLOR[log.level] ?? 'text-gray-400'} font-semibold`}>[{log.level}]</span>
+                  <span className="text-gray-500">{log.status_code ?? '-'}</span>
+                  <span className="text-gray-300 break-all line-clamp-1">{log.message ?? '-'}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -171,8 +193,14 @@ export default function DashboardPage() {
         <div className="lg:col-span-6 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
           <h3 className="font-extrabold text-lg tracking-tight mb-6 flex justify-between items-center">
             실시간 로그 스트림 (요약)
+            <span className="text-xs text-gray-600 font-normal">15초마다 갱신</span>
           </h3>
-          <LogStream logs={logStream} />
+          <LogStream logs={webappLogs.map((log) => ({
+            id: log.id,
+            timestamp: log.collected_at.slice(11, 19),
+            level: (log.level as 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL'),
+            message: `[${log.log_type}] ${log.message ?? ''}`,
+          }))} />
         </div>
 
         <div className="lg:col-span-3 bg-red-950/20 p-7 rounded-3xl border border-red-900/30 shadow-inner">

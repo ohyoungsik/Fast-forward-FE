@@ -5,7 +5,6 @@ import DashboardPage from './pages/DashboardPage';
 import InfrastructureMonitoringPage from './pages/InfrastructureMonitoringPage';
 import AccessSecurityLogsPage from './pages/AccessSecurityLogsPage';
 import WebApplicationLogsPage from './pages/WebApplicationLogsPage';
-import NginxLogsPage from './pages/NginxLogsPage';
 import KernelLogsPage from './pages/KernelLogsPage';
 import Login from './pages/Login';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -21,7 +20,6 @@ export default function App() {
           <Route path="/infra" element={<InfrastructureMonitoringPage />} />
           <Route path="/access-security-logs" element={<AccessSecurityLogsPage />} />
           <Route path="/webapp-logs" element={<WebApplicationLogsPage />} />
-          <Route path="/nginx-logs" element={<NginxLogsPage />} />
           <Route path="/kernel-logs" element={<KernelLogsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
