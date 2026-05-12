@@ -19,8 +19,8 @@ jobs:
             cd ~/fornt-test
             git pull origin dev
             npm install
-            npm run build
-            # npm run dev --host 0.0.0.0 --port 5173
+            # npm run build
+            npm run dev --host 0.0.0.0 --port 5173
             # source venv39/bin/activate
             # pip install --upgrade pip
             # pip install -r requirements.txt
