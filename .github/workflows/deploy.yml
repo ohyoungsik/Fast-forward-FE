@@ -1,0 +1,36 @@
+name: FRONT CI/CD Pipeline
+
+on:
+  push:
+    branches: ["dev"] # dev 브렌치에 push될 때 아래의 job 실행
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }} # 이게 동작하기 위해서는 github 에 secrets 가 등록이 되어 있어야한다
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      # 1. 소스코드 체크아웃
+      - uses: actions/checkout@v5
+
+      # 2. SSH 키 설정
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+      
+      # 액션과 동시에 EC2생성시에는 공개키를 AWS에서 넣어주기 때문에 가능하나
+      # (ermission denied (publickey):공개키 미일치)미리 생성된 EC2에는 .ssh/authorized_keys 파일에 공개키가 등록되어 있어야한다
+      # 3. EC2 서버에 배포 명령 실행
+      - name: Deploy to EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd ~/fornt-test
+            git pull origin dev
+            npm install
+            # npm run build
+            nohup npm run dev --host 0.0.0.0 --port 5173 > frontend.log 2>&1 &
+          EOF

@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosHeaders, type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { clearTokens, getAccessToken, getRefreshToken, setTokens, type AuthTokens } from '../auth/tokenStorage';
 
-const API_BASE_URL = 'http://localhost:8001/api/v1';
+const API_BASE_URL = 'http://localhost:8002/api/v1';
 
 type RefreshResponse = {
   accessToken: string;
@@ -73,9 +73,7 @@ api.interceptors.response.use(
       return new Promise((resolve, reject) => {
         refreshQueue.push((token) => {
           if (!token) return reject(err);
-          const headers = AxiosHeaders.from(originalConfig.headers);
-          headers.set('Authorization', `Bearer ${token}`);
-          originalConfig.headers = headers;
+          originalConfig.headers = new AxiosHeaders({ ...originalConfig.headers, Authorization: `Bearer ${token}` });
           resolve(api(originalConfig));
         });
       });
@@ -85,9 +83,7 @@ api.interceptors.response.use(
     try {
       const tokens = await refreshAccessToken(api);
       resolveRefreshQueue(tokens.accessToken);
-      const headers = AxiosHeaders.from(originalConfig.headers);
-      headers.set('Authorization', `Bearer ${tokens.accessToken}`);
-      originalConfig.headers = headers;
+      originalConfig.headers = new AxiosHeaders({ ...originalConfig.headers, Authorization: `Bearer ${tokens.accessToken}` });
       return api(originalConfig);
     } catch (refreshErr) {
       resolveRefreshQueue(null);
