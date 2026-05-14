@@ -45,13 +45,14 @@ jobs:
             -i ~/.ssh/id_rsa \
             -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
             ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }} \
-            "sudo rm -rf /var/www/frontend && sudo mkdir -p /var/www/frontend && sudo chown ${{ secrets.FRONTEND_USER }}:${{ secrets.FRONTEND_USER }} /var/www/frontend"
+            "sudo mkdir -p /var/www/html && sudo rm -rf /var/www/html/* && sudo chown -R ${{ secrets.FRONTEND_USER }}:${{ secrets.FRONTEND_USER }} /var/www/html"
+
           scp -r \
             -o StrictHostKeyChecking=no \
             -i ~/.ssh/id_rsa \
             -o ProxyJump=${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
             dist/* \
-            ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }}:/var/www/frontend/
+            ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }}:/var/www/html/
 
       - name: Reload Nginx
         run: |
@@ -59,4 +60,4 @@ jobs:
             -i ~/.ssh/id_rsa \
             -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
             ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }} \
-            "sudo systemctl reload nginx"
+            "sudo nginx -t && sudo systemctl reload nginx"
