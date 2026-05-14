@@ -26,17 +26,17 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
 
       # 빌드 결과(dist/)를 Bastion 서버의 /tmp/frontend-dist에 복사(임시저장)
       - name: Copy build to Bastion
         run: |
-          scp -i ~/.ssh/id_rsa -r dist ubuntu@${{ secrets.EC2_HOST }}:/tmp/frontend-dist
+          scp -i ~/.ssh/id_rsa -r dist ubuntu@${{ secrets.BASTION_HOST }}:/tmp/frontend-dist
             
       # 액션과 동시에 EC2생성시에는 공개키를 AWS에서 넣어주기 때문에 가능하나
       # (ermission denied (publickey):공개키 미일치)
       # 미리 생성된 EC2에는 .ssh/authorized_keys 파일에 공개키가 등록되어 있어야한다
-      
+
       # 3. EC2 서버에 배포 명령 실행
       - name: Deploy to Private Nginx
         run: |
