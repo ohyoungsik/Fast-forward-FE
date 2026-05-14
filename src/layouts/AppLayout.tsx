@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { LayoutDashboard, Server, ShieldCheck, Globe, Terminal, Bell, Settings } from 'lucide-react';
+import { LayoutDashboard, Server, ShieldCheck, Globe } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import UserMenu from '../components/auth/UserMenu';
 
@@ -13,8 +13,7 @@ const navItems: NavItem[] = [
   { to: '/', label: '대시보드', icon: <LayoutDashboard size={18} /> },
   { to: '/infra', label: '인프라 모니터링', icon: <Server size={18} /> },
   { to: '/access-security-logs', label: '접근 보안 로그', icon: <ShieldCheck size={18} /> },
-  { to: '/webapp-logs', label: 'Web Application 로그', icon: <Globe size={18} /> },
-  // { to: '/kernel-logs', label: '커널 로그', icon: <Terminal size={18} /> },
+  { to: '/webapp-logs', label: 'Web Application 로그', icon: <Globe size={18} /> }
 ];
 
 function NavItemLink({ to, label, icon }: NavItem) {
