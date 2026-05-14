@@ -1,0 +1,62 @@
+name: Deploy React Frontend
+
+on:
+  push:
+    branches:
+      - feature/gitaction
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build -- --mode prod
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Add Frontend host to known_hosts via Bastion
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            -i ~/.ssh/id_rsa \
+            ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+            "ssh-keyscan -H ${{ secrets.FRONTEND_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy dist to Frontend Server
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            -i ~/.ssh/id_rsa \
+            -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+            ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }} \
+            "sudo rm -rf /var/www/frontend && sudo mkdir -p /var/www/frontend && sudo chown ${{ secrets.FRONTEND_USER }}:${{ secrets.FRONTEND_USER }} /var/www/frontend"
+          scp -r \
+            -o StrictHostKeyChecking=no \
+            -i ~/.ssh/id_rsa \
+            -o ProxyJump=${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+            dist/* \
+            ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }}:/var/www/frontend/
+
+      - name: Reload Nginx
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            -i ~/.ssh/id_rsa \
+            -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+            ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }} \
+            "sudo systemctl reload nginx"
