@@ -41,7 +41,7 @@ export default function WebApplicationLogsPage() {
     const isNginxTab = NGINX_TABS.has(logType);
     const fetchFn = isNginxTab
       ? getNginxLogs({
-          log_type: logType === 'nginx_access' ? 'access' : 'error',
+          log_type: logType === 'nginx_access' ? 'nginx_access' : 'nginx_error',
           limit: 200,
         })
       : getWebappLogs({ log_type: logType || undefined, limit: 200 });
