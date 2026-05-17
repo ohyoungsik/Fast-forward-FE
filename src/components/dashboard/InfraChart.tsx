@@ -2,7 +2,7 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { InfraMetricData } from '../../types/dashboard';
-
+// cicd test 
 interface InfraChartProps {
   data: InfraMetricData[];
 }
