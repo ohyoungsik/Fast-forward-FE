@@ -5,6 +5,8 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { SearchBar } from '../components/ui/SearchBar';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
+import { Pagination } from '../components/ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import ServerDropdown from '../components/ServerDropdown';
 import { getSecurityAccessLogs, type SecurityAccessLogItem } from '../api/security';
 
@@ -54,6 +56,8 @@ export default function AccessSecurityLogsPage() {
       return hay.includes(q);
     });
   }, [logs, query]);
+
+  const { page, setPage, pageCount, paginatedItems } = usePagination(filtered);
 
   const columns: Column<SecurityAccessLogItem>[] = [
     {
@@ -139,7 +143,16 @@ export default function AccessSecurityLogsPage() {
             {selectedServer ? '해당 서버의 로그가 없습니다.' : '서버를 선택해 주세요.'}
           </div>
         ) : (
-          <DataTable columns={columns} rows={filtered} />
+          <>
+            <DataTable columns={columns} rows={paginatedItems} />
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              total={filtered.length}
+              pageSize={50}
+              onPageChange={setPage}
+            />
+          </>
         )}
       </Card>
     </div>

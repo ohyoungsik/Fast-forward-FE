@@ -4,6 +4,8 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { SearchBar } from '../components/ui/SearchBar';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
+import { Pagination } from '../components/ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import { mockNginxLogs } from '../constants/mockPages';
 import type { LogRow } from '../types/logs';
 
@@ -26,6 +28,8 @@ export default function NginxLogsPage() {
     });
   }, [query]);
 
+  const { page, setPage, pageCount, paginatedItems } = usePagination(filtered);
+
   const columns: Column<LogRow>[] = [
     { key: 'timestamp', header: 'Timestamp', cell: (r) => <span className="text-gray-400 font-mono">{r.timestamp}</span>, className: 'whitespace-nowrap' },
     { key: 'level', header: 'Level', cell: (r) => levelBadge(r.level), className: 'whitespace-nowrap' },
@@ -44,10 +48,28 @@ export default function NginxLogsPage() {
       <SearchBar value={query} onChange={setQuery} placeholder="검색: status code, /path, upstream error, IP" />
 
       <Card>
-        <CardHeader title="Nginx Access/Error" description="입력 즉시 필터링됩니다." right={<div className="text-xs text-gray-500">rows: {filtered.length}</div>} />
-        <DataTable columns={columns} rows={filtered} />
+        <CardHeader
+          title="Nginx Access/Error"
+          description="입력 즉시 필터링됩니다."
+          right={<div className="text-xs text-gray-500">rows: {filtered.length}</div>}
+        />
+        {filtered.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-gray-600 text-sm">
+            표시할 데이터가 없습니다.
+          </div>
+        ) : (
+          <>
+            <DataTable columns={columns} rows={paginatedItems} />
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              total={filtered.length}
+              pageSize={50}
+              onPageChange={setPage}
+            />
+          </>
+        )}
       </Card>
     </div>
   );
 }
-

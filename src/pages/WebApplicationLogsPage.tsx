@@ -5,6 +5,8 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { SearchBar } from '../components/ui/SearchBar';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
+import { Pagination } from '../components/ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import { getWebappLogs, getNginxLogs, type AppLogItem } from '../api/webapp_logs';
 
 const LOG_TYPES = [
@@ -60,6 +62,8 @@ export default function WebApplicationLogsPage() {
       return hay.includes(q);
     });
   }, [logs, query]);
+
+  const { page, setPage, pageCount, paginatedItems } = usePagination(filtered);
 
   const columns: Column<AppLogItem>[] = [
     {
@@ -168,7 +172,16 @@ export default function WebApplicationLogsPage() {
             수집된 로그가 없습니다.
           </div>
         ) : (
-          <DataTable columns={columns} rows={filtered} />
+          <>
+            <DataTable columns={columns} rows={paginatedItems} />
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              total={filtered.length}
+              pageSize={50}
+              onPageChange={setPage}
+            />
+          </>
         )}
       </Card>
     </div>
