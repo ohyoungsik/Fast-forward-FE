@@ -16,6 +16,7 @@ export interface InfraMetricData {
   disk: number;
 }
 
+// cicd test
 export interface NginxLogStatus {
   name: string; // ex: '200 (Success)', '404'
   value: number; // 로그 개수

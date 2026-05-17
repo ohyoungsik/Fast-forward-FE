@@ -3,7 +3,7 @@ name: Deploy React Frontend
 on:
   push:
     branches:
-      - feature/gitaction
+      - main
 
 jobs:
   deploy:
