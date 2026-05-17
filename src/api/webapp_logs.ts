@@ -24,7 +24,7 @@ export async function getWebappLogs(params?: {
 }
 
 export async function getNginxLogs(params?: {
-  log_type?: 'access' | 'error';
+  log_type?: 'nginx_access' | 'nginx_error';
   keyword?: string;
   limit?: number;
 }): Promise<AppLogItem[]> {
