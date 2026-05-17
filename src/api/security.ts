@@ -1,21 +1,27 @@
 import { api } from './client';
 
-export interface SecurityLogItem {
+export interface SecurityAccessLogItem {
   id: number;
-  timestamp: string;
+  server_name: string | null;
+  server_role: string | null;
+  log_type: string;
   level: string;
-  ip: string;
-  status_code: string;
-  message: string;
-  service: string;
+  user_id: string | null;
+  source_ip: string | null;
+  auth_method: string | null;
+  status: string | null;
+  source_path: string | null;
+  message: string | null;
+  collected_at: string;
 }
 
-export async function getSecurityLogs(
-  server_name?: string,
-  keyword?: string,
-): Promise<SecurityLogItem[]> {
-  const res = await api.get<SecurityLogItem[]>('/security/logs', {
-    params: { server_name, keyword },
-  });
+export async function getSecurityAccessLogs(params?: {
+  server_name?: string;
+  level?: string;
+  status?: string;
+  keyword?: string;
+  limit?: number;
+}): Promise<SecurityAccessLogItem[]> {
+  const res = await api.get<SecurityAccessLogItem[]>('/security/logs/access', { params });
   return res.data;
 }

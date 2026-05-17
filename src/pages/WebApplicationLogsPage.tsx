@@ -5,7 +5,7 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { SearchBar } from '../components/ui/SearchBar';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
-import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
+import { getWebappLogs, getNginxLogs, type AppLogItem } from '../api/webapp_logs';
 
 const LOG_TYPES = [
   { value: '', label: '전체' },
@@ -14,6 +14,8 @@ const LOG_TYPES = [
   { value: 'nginx_access', label: 'Nginx Access' },
   { value: 'nginx_error', label: 'Nginx Error' },
 ];
+
+const NGINX_TABS = new Set(['nginx_access', 'nginx_error']);
 
 function levelBadge(level: string) {
   if (level === 'INFO') return <Badge variant="INFO">INFO</Badge>;
@@ -34,7 +36,15 @@ export default function WebApplicationLogsPage() {
     setIsLoading(true);
     setError(null);
 
-    getWebappLogs({ log_type: logType || undefined, limit: 200 })
+    const isNginxTab = NGINX_TABS.has(logType);
+    const fetchFn = isNginxTab
+      ? getNginxLogs({
+          log_type: logType === 'nginx_access' ? 'access' : 'error',
+          limit: 200,
+        })
+      : getWebappLogs({ log_type: logType || undefined, limit: 200 });
+
+    fetchFn
       .then((data) => { if (!cancelled) setLogs(data); })
       .catch(() => { if (!cancelled) setError('로그 조회 실패. 서버 연결을 확인하세요.'); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
@@ -150,7 +160,7 @@ export default function WebApplicationLogsPage() {
       <Card>
         <CardHeader
           title="Web Application Events"
-          description="Nginx + FastAPI 에러 통합 뷰"
+          description="Nginx (nginx_logs) + FastAPI/인증 (app_logs) 통합 뷰"
           right={<div className="text-xs text-gray-500">rows: {filtered.length}</div>}
         />
         {filtered.length === 0 && !isLoading ? (
