@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Bell, Loader2, Search } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import StatusCard from '../components/dashboard/StatusCard';
@@ -10,8 +10,9 @@ import ServerDropdown from '../components/ServerDropdown';
 import { initialStatusCards, initialNginxData } from '../constants/mockData';
 import { getMetrics } from '../api/metrics';
 import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
+import { getSecurityAccessLogs, type SecurityAccessLogItem } from '../api/security';
 import type { MetricsResponse } from '../types/metrics';
-import type { InfraMetricData } from '../types/dashboard';
+import type { InfraMetricData, RealTimeLog } from '../types/dashboard';
 
 const LEVEL_COLOR: Record<string, string> = {
   INFO: 'text-blue-400',
@@ -32,6 +33,11 @@ function nowTimestamp() {
   return `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 }
 
+function toStreamLevel(level: string): RealTimeLog['level'] {
+  if (level === 'INFO' || level === 'WARN' || level === 'ERROR' || level === 'CRITICAL') return level;
+  return 'INFO';
+}
+
 export default function DashboardPage() {
   const [selectedServer, setSelectedServer] = useState<string>('');
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
@@ -39,6 +45,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [webappLogs, setWebappLogs] = useState<AppLogItem[]>([]);
+  const [securityLogs, setSecurityLogs] = useState<SecurityAccessLogItem[]>([]);
 
   useEffect(() => {
     if (!selectedServer) return;
@@ -81,30 +88,42 @@ export default function DashboardPage() {
       getWebappLogs({ limit: 15 })
         .then((data) => setWebappLogs(data))
         .catch(() => {});
+      getSecurityAccessLogs({ limit: 15 })
+        .then((data) => setSecurityLogs(data))
+        .catch(() => {});
     };
     fetchLogs();
     const id = setInterval(fetchLogs, 15000);
     return () => clearInterval(id);
   }, []);
 
+  const streamLogs = useMemo<RealTimeLog[]>(() => {
+    const combined: RealTimeLog[] = [
+      ...webappLogs.map((log) => ({
+        id: `wa-${log.id}`,
+        timestamp: log.collected_at.slice(11, 19),
+        level: toStreamLevel(log.level),
+        message: `[${log.log_type}] ${log.message ?? ''}`,
+      })),
+      ...securityLogs.map((log) => ({
+        id: `sec-${log.id}`,
+        timestamp: log.collected_at.slice(11, 19),
+        level: toStreamLevel(log.level),
+        message: `[${log.log_type}] ${log.user_id ? log.user_id + ' ' : ''}${log.message ?? ''}`,
+      })),
+    ];
+    return combined
+      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+      .slice(0, 20);
+  }, [webappLogs, securityLogs]);
+
   return (
     <>
-      <header className="flex flex-col gap-5 md:flex-row md:justify-between md:items-center mb-6 pb-6 border-b border-gray-900">
-        <div>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight">
-            통합 모니터링 대시보드 <span className="text-green-500 text-sm ml-3 font-semibold">● 실시간</span>
-          </h2>
-          <p className="text-gray-500 mt-2">다양한 로그와 시스템 지표를 한눈에 확인하고, 이상 징후를 빠르게 탐지하세요.</p>
-        </div>
-        <div className="flex items-center gap-4 bg-gray-900 border border-gray-800 p-2.5 rounded-xl shadow-inner w-full md:w-auto">
-          <Search className="text-gray-600" />
-          <input type="text" placeholder="검색..." className="bg-transparent text-sm focus:outline-none flex-1 md:flex-none" />
-          <span className="text-gray-700">|</span>
-          <select className="bg-transparent text-sm focus:outline-none text-gray-400">
-            <option>최근 1시간</option>
-          </select>
-          <Bell className="text-gray-400 cursor-pointer" />
-        </div>
+      <header className="mb-6 pb-6 border-b border-gray-900">
+        <h2 className="text-3xl font-extrabold text-white tracking-tight">
+          통합 모니터링 대시보드 <span className="text-green-500 text-sm ml-3 font-semibold">● 실시간</span>
+        </h2>
+        <p className="text-gray-500 mt-2">다양한 로그와 시스템 지표를 한눈에 확인하고, 이상 징후를 빠르게 탐지하세요.</p>
       </header>
 
       <div className="flex items-center gap-4 mb-8">
@@ -138,8 +157,8 @@ export default function DashboardPage() {
         })}
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-10">
-        <div className="lg:col-span-4 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        <div className="bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-extrabold text-lg tracking-tight">인프라 모니터링</h3>
             <div className="flex gap-1.5">
@@ -157,12 +176,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="lg:col-span-4 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
-          <h3 className="font-extrabold text-lg tracking-tight mb-6">접근 보안 로그</h3>
-          <div className="text-gray-500 text-sm flex items-center justify-center h-[280px]">구현 생략 (막대 차트)</div>
-        </div>
-
-        <div className="lg:col-span-4 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
+        <div className="bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-extrabold text-lg tracking-tight">Web Application 로그</h3>
             <Link to="/webapp-logs" className="text-xs text-blue-400 hover:text-blue-300 transition-colors">전체 보기 →</Link>
@@ -195,12 +209,7 @@ export default function DashboardPage() {
             실시간 로그 스트림 (요약)
             <span className="text-xs text-gray-600 font-normal">15초마다 갱신</span>
           </h3>
-          <LogStream logs={webappLogs.map((log) => ({
-            id: log.id,
-            timestamp: log.collected_at.slice(11, 19),
-            level: (log.level as 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL'),
-            message: `[${log.log_type}] ${log.message ?? ''}`,
-          }))} />
+          <LogStream logs={streamLogs} />
         </div>
 
         <div className="lg:col-span-3 bg-red-950/20 p-7 rounded-3xl border border-red-900/30 shadow-inner">
