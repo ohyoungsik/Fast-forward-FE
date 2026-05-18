@@ -199,31 +199,17 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-3 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
+        <div className="lg:col-span-4 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
           <h3 className="font-extrabold text-lg tracking-tight mb-6">Nginx Log</h3>
           <NginxLogChart data={initialNginxData} />
         </div>
 
-        <div className="lg:col-span-6 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
+        <div className="lg:col-span-8 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
           <h3 className="font-extrabold text-lg tracking-tight mb-6 flex justify-between items-center">
             실시간 로그 스트림 (요약)
             <span className="text-xs text-gray-600 font-normal">15초마다 갱신</span>
           </h3>
           <LogStream logs={streamLogs} />
-        </div>
-
-        <div className="lg:col-span-3 bg-red-950/20 p-7 rounded-3xl border border-red-900/30 shadow-inner">
-          <h3 className="font-extrabold text-lg tracking-tight text-red-500 mb-6">알림 예시</h3>
-          <div className="space-y-4">
-            <div className="text-xs border-l-2 border-red-600 pl-3">
-              <p className="text-white font-medium">CPU 사용률 90% 이상 지속</p>
-              <p className="text-gray-600 mt-1">10:45</p>
-            </div>
-            <div className="text-xs border-l-2 border-orange-600 pl-3">
-              <p className="text-white font-medium">SSH 로그인 실패 10회 이상</p>
-              <p className="text-gray-600 mt-1">10:40</p>
-            </div>
-          </div>
         </div>
       </section>
     </>
