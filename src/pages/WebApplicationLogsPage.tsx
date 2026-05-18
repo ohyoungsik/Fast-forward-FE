@@ -5,6 +5,7 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { SearchBar } from '../components/ui/SearchBar';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
+import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
 import { getWebappLogs, getNginxLogs, type AppLogItem } from '../api/webapp_logs';
@@ -32,6 +33,7 @@ export default function WebApplicationLogsPage() {
   const [logs, setLogs] = useState<AppLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedLog, setSelectedLog] = useState<AppLogItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +95,11 @@ export default function WebApplicationLogsPage() {
     {
       key: 'path',
       header: 'Path',
-      cell: (r) => <span className="font-mono text-gray-200 break-all">{r.path ?? '-'}</span>,
+      cell: (r) => (
+        <span className="font-mono text-gray-200 block max-w-[220px] truncate" title={r.path ?? ''}>
+          {r.path ?? '-'}
+        </span>
+      ),
     },
     {
       key: 'status_code',
@@ -116,7 +122,11 @@ export default function WebApplicationLogsPage() {
     {
       key: 'message',
       header: 'Message',
-      cell: (r) => <span className="text-gray-200 break-all">{r.message ?? '-'}</span>,
+      cell: (r) => (
+        <span className="text-gray-200 block max-w-[300px] truncate" title={r.message ?? ''}>
+          {r.message ?? '-'}
+        </span>
+      ),
     },
   ];
 
@@ -173,7 +183,7 @@ export default function WebApplicationLogsPage() {
           </div>
         ) : (
           <>
-            <DataTable columns={columns} rows={paginatedItems} />
+            <DataTable columns={columns} rows={paginatedItems} onRowClick={setSelectedLog} />
             <Pagination
               page={page}
               pageCount={pageCount}
@@ -184,6 +194,35 @@ export default function WebApplicationLogsPage() {
           </>
         )}
       </Card>
+      <Modal
+        open={selectedLog !== null}
+        onClose={() => setSelectedLog(null)}
+        title="로그 상세"
+      >
+        {selectedLog && (
+          <dl className="space-y-3 text-sm">
+            {(
+              [
+                ['Timestamp', selectedLog.collected_at],
+                ['Type', selectedLog.log_type],
+                ['Level', selectedLog.level],
+                ['Server', selectedLog.server_name ?? '-'],
+                ['Method', selectedLog.method ?? '-'],
+                ['Path', selectedLog.path ?? '-'],
+                ['Status', selectedLog.status_code ?? '-'],
+                ['Client IP', selectedLog.client_ip ?? '-'],
+                ['Response (ms)', selectedLog.response_time_ms?.toString() ?? '-'],
+                ['Message', selectedLog.message ?? '-'],
+              ] as [string, string][]
+            ).map(([label, value]) => (
+              <div key={label} className="grid grid-cols-[130px_1fr] gap-2">
+                <dt className="text-gray-500 font-medium shrink-0">{label}</dt>
+                <dd className="text-gray-100 break-all">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Modal>
     </div>
   );
 }

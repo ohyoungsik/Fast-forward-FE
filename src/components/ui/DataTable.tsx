@@ -9,10 +9,12 @@ export function DataTable<T>({
   columns,
   rows,
   emptyText = '표시할 데이터가 없습니다.',
+  onRowClick,
 }: {
   columns: Column<T>[];
   rows: T[];
   emptyText?: string;
+  onRowClick?: (row: T) => void;
 }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-gray-800">
@@ -35,7 +37,11 @@ export function DataTable<T>({
             </tr>
           ) : (
             rows.map((row, idx) => (
-              <tr key={idx} className="hover:bg-white/[0.03] transition-colors">
+              <tr
+                key={idx}
+                onClick={() => onRowClick?.(row)}
+                className={['hover:bg-white/[0.03] transition-colors', onRowClick ? 'cursor-pointer' : ''].join(' ')}
+              >
                 {columns.map((c) => (
                   <td key={c.key} className={['px-4 py-3 align-top text-gray-200', c.className ?? ''].join(' ')}>
                     {c.cell(row)}
