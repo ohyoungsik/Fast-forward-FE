@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
+import axios from 'axios';
 
 import { Card, CardHeader } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
+import { Toast, type ToastState } from '../components/ui/Toast';
 import { useAuth } from '../auth/useAuth';
 import { signup } from '../api/auth';
 
@@ -16,14 +18,6 @@ function FieldError({ message }: { message?: string }) {
   return <p className="mt-2 text-xs text-red-400">{message}</p>;
 }
 
-function InlineError({ message }: { message?: string }) {
-  if (!message) return null;
-  return (
-    <div className="mt-4 rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-3 text-sm text-red-300">
-      {message}
-    </div>
-  );
-}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -33,7 +27,7 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [touched, setTouched] = useState<{ username: boolean; password: boolean }>({ username: false, password: false });
 
   const [signupOpen, setSignupOpen] = useState(false);
@@ -108,15 +102,33 @@ export default function Login() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTouched({ username: true, password: true });
-    setError(null);
     if (!username.trim() || !password) return;
 
     setSubmitting(true);
     try {
       await login({ username: username.trim(), password });
       navigate(fromPath, { replace: true });
-    } catch {
-      setError('로그인에 실패했습니다. 아이디/비밀번호를 확인해주세요.');
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const status = err.response?.status;
+        const detail: string = err.response?.data?.detail ?? '';
+
+        if (status === 401) {
+          setToast({ message: '아이디 또는 비밀번호가 올바르지 않습니다.', variant: 'error' });
+        } else if (status === 423) {
+          const alreadyLocked = detail.includes('이미') || detail.includes('잠겨 있');
+          setToast({
+            message: alreadyLocked
+              ? '아직 계정이 잠겨 있습니다. 잠시 후 다시 시도해주세요.'
+              : '로그인 5회 실패로 계정이 5분간 잠겼습니다.',
+            variant: 'warning',
+          });
+        } else {
+          setToast({ message: '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.', variant: 'error' });
+        }
+      } else {
+        setToast({ message: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', variant: 'error' });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -143,7 +155,7 @@ export default function Login() {
       setSignupEmail('');
       setSignupPassword('');
       setSignupTouched({ name: false, username: false, email: false, password: false });
-      setError('회원가입이 완료되었습니다. 로그인해주세요.');
+      setToast({ message: '회원가입이 완료되었습니다. 로그인해주세요.', variant: 'success' });
     } catch {
       setSignupError('회원가입에 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
@@ -153,6 +165,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-black text-gray-300 flex items-center justify-center px-4">
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
       <div className="w-full max-w-md">
         <div className="mb-8 text-left">
           <div className="flex items-center gap-3 text-blue-500 font-bold">
@@ -228,7 +241,6 @@ export default function Login() {
                 </button>
               </div>
 
-              <InlineError message={error ?? undefined} />
             </form>
           </div>
         </Card>
@@ -301,7 +313,11 @@ export default function Login() {
             {signupSubmitting ? '가입 처리 중…' : '회원가입'}
           </button>
 
-          <InlineError message={signupError ?? undefined} />
+          {signupError && (
+            <div className="rounded-xl border border-red-900/50 bg-red-950/20 px-4 py-3 text-sm text-red-300">
+              {signupError}
+            </div>
+          )}
         </form>
       </Modal>
     </div>
