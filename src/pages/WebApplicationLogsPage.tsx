@@ -43,22 +43,25 @@ export default function WebApplicationLogsPage() {
     const isNginxTab = NGINX_TABS.has(logType);
     const isAllTab = logType === '';
 
-    const fetchFn = isAllTab
-      ? Promise.all([
-          getWebappLogs({ limit: 200 }),
-          getNginxLogs({ log_type: 'nginx_access', limit: 200 }),
-          getNginxLogs({ log_type: 'nginx_error', limit: 200 }),
-        ]).then(([webapp, access, error]) =>
-          [...webapp, ...access, ...error].sort((a, b) =>
-            b.collected_at.localeCompare(a.collected_at)
-          )
-        )
-      : isNginxTab
-      ? getNginxLogs({
-          log_type: logType === 'nginx_access' ? 'nginx_access' : 'nginx_error',
-          limit: 200,
-        })
-      : getWebappLogs({ log_type: logType, limit: 200 });
+    let fetchFn: Promise<AppLogItem[]>;
+
+    if (isAllTab) {
+      fetchFn = Promise.allSettled([
+        getWebappLogs({ limit: 200 }),
+        getNginxLogs({ log_type: 'nginx_access', limit: 200 }),
+        getNginxLogs({ log_type: 'nginx_error', limit: 200 }),
+      ]).then((results) => {
+        const merged: AppLogItem[] = [];
+        results.forEach((r) => {
+          if (r.status === 'fulfilled') merged.push(...r.value);
+        });
+        return merged.sort((a, b) => b.collected_at.localeCompare(a.collected_at));
+      });
+    } else if (isNginxTab) {
+      fetchFn = getNginxLogs({ log_type: logType as 'nginx_access' | 'nginx_error', limit: 200 });
+    } else {
+      fetchFn = getWebappLogs({ log_type: logType, limit: 200 });
+    }
 
     fetchFn
       .then((data) => { if (!cancelled) setLogs(data); })

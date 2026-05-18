@@ -9,6 +9,9 @@ import { Pagination } from '../components/ui/Pagination';
 import { usePagination } from '../hooks/usePagination';
 import ServerDropdown from '../components/ServerDropdown';
 import { getSecurityAccessLogs, type SecurityAccessLogItem } from '../api/security';
+import { DEFAULT_SERVERS } from '../types/metrics';
+
+const INITIAL_SERVER = DEFAULT_SERVERS[0].server_name;
 
 function levelBadge(level: string) {
   if (level === 'INFO') return <Badge variant="INFO">INFO</Badge>;
@@ -28,19 +31,17 @@ function statusBadge(status: string | null) {
 
 export default function AccessSecurityLogsPage() {
   const [query, setQuery] = useState('');
-  const [selectedServer, setSelectedServer] = useState<string>('');
+  const [selectedServer, setSelectedServer] = useState<string>(INITIAL_SERVER);
   const [logs, setLogs] = useState<SecurityAccessLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!selectedServer) return;
-
     let cancelled = false;
     setIsLoading(true);
     setError(null);
 
-    getSecurityAccessLogs({ server_name: selectedServer })
+    getSecurityAccessLogs({ server_name: selectedServer || undefined })
       .then((data) => { if (!cancelled) setLogs(data); })
       .catch(() => { if (!cancelled) setError('로그 조회 실패. 서버 연결을 확인하세요.'); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
@@ -140,7 +141,7 @@ export default function AccessSecurityLogsPage() {
         />
         {filtered.length === 0 && !isLoading ? (
           <div className="flex items-center justify-center h-32 text-gray-600 text-sm">
-            {selectedServer ? '해당 서버의 로그가 없습니다.' : '서버를 선택해 주세요.'}
+            해당 서버의 로그가 없습니다.
           </div>
         ) : (
           <>
