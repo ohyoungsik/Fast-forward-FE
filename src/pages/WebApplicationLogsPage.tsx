@@ -41,12 +41,24 @@ export default function WebApplicationLogsPage() {
     setError(null);
 
     const isNginxTab = NGINX_TABS.has(logType);
-    const fetchFn = isNginxTab
+    const isAllTab = logType === '';
+
+    const fetchFn = isAllTab
+      ? Promise.all([
+          getWebappLogs({ limit: 200 }),
+          getNginxLogs({ log_type: 'nginx_access', limit: 200 }),
+          getNginxLogs({ log_type: 'nginx_error', limit: 200 }),
+        ]).then(([webapp, access, error]) =>
+          [...webapp, ...access, ...error].sort((a, b) =>
+            b.collected_at.localeCompare(a.collected_at)
+          )
+        )
+      : isNginxTab
       ? getNginxLogs({
           log_type: logType === 'nginx_access' ? 'nginx_access' : 'nginx_error',
           limit: 200,
         })
-      : getWebappLogs({ log_type: logType || undefined, limit: 200 });
+      : getWebappLogs({ log_type: logType, limit: 200 });
 
     fetchFn
       .then((data) => { if (!cancelled) setLogs(data); })
