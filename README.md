@@ -1,3 +1,57 @@
+
+
+1.다이어그램 (Mermaid 사용 가능):
+flowchart TD
+  Developer --> GitHub
+  GitHub --> Nginx[Private Nginx Server 172.16.20.10]
+  Nginx --> User
+
+2. 인프라 재현 방법 (How to run)
+로컬 개발 환경 실행법
+빌드 및 배포 과정
+bash
+# 로컬 실행
+npm install
+npm run dev
+
+# 빌드
+npm run build
+
+# Nginx 서버에 배포
+scp -r ./dist user@172.16.20.10:/var/www/html
+
+3. 환경 변수 세팅
+.env 파일 예시:
+
+env
+API_URL=http://172.16.20.10
+NODE_ENV=production
+
+보안 관련 변수는 .env.example만 제공하고 실제 값은 공유하지 않도록 안내
+
+4. 배포 대상 서버 정보
+서버 IP: 172.16.20.10
+
+Nginx 설정 예시:
+
+nginx
+server {
+    listen 80;
+    server_name 172.16.20.10;
+
+    root /var/www/html;
+    index index.html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+}
+
+
+
+
+
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
