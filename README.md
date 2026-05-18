@@ -1,73 +1,82 @@
-# React + TypeScript + Vite
+# Fast-Forward 인프라 모니터링 대시보드 (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+EC2 기반 인프라의 시스템 지표와 각종 로그를 실시간으로 모니터링하는 웹 대시보드입니다.
 
-Currently, two official plugins are available:
+## 기술 스택
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| 분류 | 기술 |
+|------|------|
+| Framework | React 19 + TypeScript |
+| Build Tool | Vite |
+| Styling | Tailwind CSS v4 |
+| Routing | React Router v7 |
+| HTTP Client | Axios |
+| Chart | Recharts |
+| Icons | Lucide React |
 
-## React Compiler
+## 주요 기능
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **통합 대시보드** — 인프라 지표 실시간 차트, Web Application 로그 미리보기, 실시간 로그 스트림
+- **인프라 모니터링** — 서버별 CPU / 메모리 / 디스크 사용률 조회 및 이력 테이블
+- **Web Application 로그** — Nginx access/error + FastAPI 에러 + 인증 로그 통합 뷰, 행 클릭 시 상세 모달
+- **접근 보안 로그** — SSH / sudo / 세션 인증 이벤트 서버별 조회
+- **커널 로그** — 커널 이벤트 로그 조회
 
-## Expanding the ESLint configuration
+## 모니터링 대상 서버
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| 서버명 | 역할 |
+|--------|------|
+| bastion-server | Public Bastion Host |
+| nginx-fe-server | Frontend (Nginx) |
+| fastapi-be-server | Backend (FastAPI) |
+| postgre-db-server | Database (PostgreSQL) |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 시작하기
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 환경 변수 설정
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+프로젝트 루트에 `.env` 파일을 생성합니다.
+
+```env
+VITE_API_BASE_URL=http://<백엔드 IP>/api/v1
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 개발 서버 실행
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
+
+### 빌드
+
+```bash
+npm run build
+```
+
+### 미리보기
+
+```bash
+npm run preview
+```
+
+## 프로젝트 구조
+
+```
+src/
+├── api/            # Axios API 함수 (metrics, logs, security, auth)
+├── auth/           # JWT 토큰 관리 및 AuthContext
+├── components/
+│   ├── dashboard/  # 대시보드 전용 컴포넌트 (차트, 로그 스트림 등)
+│   └── ui/         # 공용 컴포넌트 (DataTable, Modal, Badge, Pagination 등)
+├── constants/      # 목 데이터 및 초기값
+├── hooks/          # usePagination 등 커스텀 훅
+├── layouts/        # AppLayout (사이드바 + 헤더)
+├── pages/          # 페이지 컴포넌트
+├── routes/         # ProtectedRoute
+└── types/          # TypeScript 인터페이스 정의
+```
+
+## 인증
+
+JWT 기반 인증을 사용합니다. 로그인 시 발급된 Access Token / Refresh Token을 `localStorage`에 저장하며, Axios 인터셉터가 만료된 토큰을 자동으로 갱신합니다.
