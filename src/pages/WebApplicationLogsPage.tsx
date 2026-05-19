@@ -5,7 +5,10 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { SearchBar } from '../components/ui/SearchBar';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
-import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
+import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { usePagination } from '../hooks/usePagination';
+import { getWebappLogs, getNginxLogs, type AppLogItem } from '../api/webapp_logs';
 
 const LOG_TYPES = [
   { value: '', label: '전체' },
@@ -14,6 +17,8 @@ const LOG_TYPES = [
   { value: 'nginx_access', label: 'Nginx Access' },
   { value: 'nginx_error', label: 'Nginx Error' },
 ];
+
+const NGINX_TABS = new Set(['nginx_access', 'nginx_error']);
 
 function levelBadge(level: string) {
   if (level === 'INFO') return <Badge variant="INFO">INFO</Badge>;
@@ -28,13 +33,37 @@ export default function WebApplicationLogsPage() {
   const [logs, setLogs] = useState<AppLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedLog, setSelectedLog] = useState<AppLogItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setError(null);
 
-    getWebappLogs({ log_type: logType || undefined, limit: 200 })
+    const isNginxTab = NGINX_TABS.has(logType);
+    const isAllTab = logType === '';
+
+    let fetchFn: Promise<AppLogItem[]>;
+
+    if (isAllTab) {
+      fetchFn = Promise.allSettled([
+        getWebappLogs({ limit: 200 }),
+        getNginxLogs({ log_type: 'nginx_access', limit: 200 }),
+        getNginxLogs({ log_type: 'nginx_error', limit: 200 }),
+      ]).then((results) => {
+        const merged: AppLogItem[] = [];
+        results.forEach((r) => {
+          if (r.status === 'fulfilled') merged.push(...r.value);
+        });
+        return merged.sort((a, b) => b.collected_at.localeCompare(a.collected_at));
+      });
+    } else if (isNginxTab) {
+      fetchFn = getNginxLogs({ log_type: logType as 'nginx_access' | 'nginx_error', limit: 200 });
+    } else {
+      fetchFn = getWebappLogs({ log_type: logType, limit: 200 });
+    }
+
+    fetchFn
       .then((data) => { if (!cancelled) setLogs(data); })
       .catch(() => { if (!cancelled) setError('로그 조회 실패. 서버 연결을 확인하세요.'); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
@@ -50,6 +79,8 @@ export default function WebApplicationLogsPage() {
       return hay.includes(q);
     });
   }, [logs, query]);
+
+  const { page, setPage, pageCount, paginatedItems } = usePagination(filtered);
 
   const columns: Column<AppLogItem>[] = [
     {
@@ -79,7 +110,11 @@ export default function WebApplicationLogsPage() {
     {
       key: 'path',
       header: 'Path',
-      cell: (r) => <span className="font-mono text-gray-200 break-all">{r.path ?? '-'}</span>,
+      cell: (r) => (
+        <span className="font-mono text-gray-200 block max-w-[220px] truncate" title={r.path ?? ''}>
+          {r.path ?? '-'}
+        </span>
+      ),
     },
     {
       key: 'status_code',
@@ -102,7 +137,11 @@ export default function WebApplicationLogsPage() {
     {
       key: 'message',
       header: 'Message',
-      cell: (r) => <span className="text-gray-200 break-all">{r.message ?? '-'}</span>,
+      cell: (r) => (
+        <span className="text-gray-200 block max-w-[300px] truncate" title={r.message ?? ''}>
+          {r.message ?? '-'}
+        </span>
+      ),
     },
   ];
 
@@ -150,7 +189,7 @@ export default function WebApplicationLogsPage() {
       <Card>
         <CardHeader
           title="Web Application Events"
-          description="Nginx + FastAPI 에러 통합 뷰"
+          description="Nginx (nginx_logs) + FastAPI/인증 (app_logs) 통합 뷰"
           right={<div className="text-xs text-gray-500">rows: {filtered.length}</div>}
         />
         {filtered.length === 0 && !isLoading ? (
@@ -158,9 +197,47 @@ export default function WebApplicationLogsPage() {
             수집된 로그가 없습니다.
           </div>
         ) : (
-          <DataTable columns={columns} rows={filtered} />
+          <>
+            <DataTable columns={columns} rows={paginatedItems} onRowClick={setSelectedLog} />
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              total={filtered.length}
+              pageSize={50}
+              onPageChange={setPage}
+            />
+          </>
         )}
       </Card>
+      <Modal
+        open={selectedLog !== null}
+        onClose={() => setSelectedLog(null)}
+        title="로그 상세"
+      >
+        {selectedLog && (
+          <dl className="space-y-3 text-sm">
+            {(
+              [
+                ['Timestamp', selectedLog.collected_at],
+                ['Type', selectedLog.log_type],
+                ['Level', selectedLog.level],
+                ['Server', selectedLog.server_name ?? '-'],
+                ['Method', selectedLog.method ?? '-'],
+                ['Path', selectedLog.path ?? '-'],
+                ['Status', selectedLog.status_code ?? '-'],
+                ['Client IP', selectedLog.client_ip ?? '-'],
+                ['Response (ms)', selectedLog.response_time_ms?.toString() ?? '-'],
+                ['Message', selectedLog.message ?? '-'],
+              ] as [string, string][]
+            ).map(([label, value]) => (
+              <div key={label} className="grid grid-cols-[130px_1fr] gap-2">
+                <dt className="text-gray-500 font-medium shrink-0">{label}</dt>
+                <dd className="text-gray-100 break-all">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Modal>
     </div>
   );
 }

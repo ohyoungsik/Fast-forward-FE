@@ -24,7 +24,7 @@ export interface NginxLogStatus {
 }
 
 export interface RealTimeLog {
-  id: number;
+  id: string | number;
   timestamp: string;
   level: 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL';
   message: string;

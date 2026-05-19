@@ -21,7 +21,7 @@ export interface ServerItem {
 }
 
 export const DEFAULT_SERVERS: ServerItem[] = [
-  { server_name: 'bastion-server', server_role: 'bastion' },
+  { server_name: 'public-bastion', server_role: 'bastion' },
   { server_name: 'nginx-fe-server', server_role: 'frontend' },
   { server_name: 'fastapi-be-server', server_role: 'backend' },
   { server_name: 'postgre-db-server', server_role: 'database' },

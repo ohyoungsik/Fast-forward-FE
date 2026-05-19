@@ -22,3 +22,12 @@ export async function getWebappLogs(params?: {
   const res = await api.get<AppLogItem[]>('/logs/webapp', { params });
   return res.data;
 }
+
+export async function getNginxLogs(params?: {
+  log_type?: 'nginx_access' | 'nginx_error';
+  keyword?: string;
+  limit?: number;
+}): Promise<AppLogItem[]> {
+  const res = await api.get<AppLogItem[]>('/logs/nginx', { params });
+  return res.data;
+}
