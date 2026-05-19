@@ -9,7 +9,7 @@ interface Props {
   onStateChange?: (s: State) => void;
 }
 
-export default function Step4Kill({ onStateChange }: Props) {
+export default function CpuKill({ onStateChange }: Props) {
   const [state, setState] = useState<State>('idle');
   const [message, setMessage] = useState('대기 중');
 
