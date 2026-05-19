@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Loader2, Settings, Check, X } from 'lucide-react';
-//실제 백엔드서버ip주소로 변경필요
+
 const API = 'http://localhost:8000/api/kill/run';
 
 type State = 'idle' | 'running' | 'done' | 'fail';
@@ -18,7 +18,7 @@ export default function CpuKill({ onStateChange }: Props) {
     onStateChange?.('running');
     setMessage('스크립트 실행 중...');
     try {
-      const res  = await fetch(API, { method: 'POST' });
+      const res = await fetch(API, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         setState('done');
@@ -32,12 +32,6 @@ export default function CpuKill({ onStateChange }: Props) {
       onStateChange?.('fail');
       setMessage(e.message || '서버 연결 실패');
     }
-  };
-  const iconMap = {
-    idle:    <Settings size={16} className="text-gray-500" />,
-    running: <Loader2  size={16} className="animate-spin text-yellow-400" />,
-    done:    <Check    size={16} className="text-green-400" />,
-    fail:    <X        size={16} className="text-red-400" />,
   };
 
   const iconBg = {
@@ -54,20 +48,26 @@ export default function CpuKill({ onStateChange }: Props) {
     fail:    'text-red-400',
   };
 
+  const renderIcon = () => {
+    if (state === 'running') return <Loader2 size={16} className="animate-spin text-yellow-400" />;
+    if (state === 'done')    return <Check   size={16} className="text-green-400" />;
+    if (state === 'fail')    return <X       size={16} className="text-red-400" />;
+    return <Settings size={16} className="text-gray-500" />;
+  };
+
   return (
     <div className="flex items-center gap-4 p-4 bg-gray-800 rounded-2xl border border-gray-700 max-w-lg mt-6">
       <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${iconBg[state]}`}>
-        {iconMap[state]}
+        {renderIcon()}
       </div>
       <div className="flex-1">
-        <p className="text-sm font-semibold text-white">4. CPU 킬 스크립트</p>
+        <p className="text-sm font-semibold text-white">CPU 킬 스크립트</p>
         <p className={`text-xs mt-0.5 ${msgColor[state]}`}>{message}</p>
       </div>
       <button
         onClick={run}
         disabled={state === 'running' || state === 'done'}
-        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-600 text-gray-300
-                   hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         {state === 'running' ? '실행 중' : state === 'done' ? '완료' : state === 'fail' ? '재시도' : '실행'}
       </button>

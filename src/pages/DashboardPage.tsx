@@ -213,7 +213,7 @@ export default function DashboardPage() {
           <LogStream logs={streamLogs} />
         </div>
       </section>
-      
+
       <CpuKill onStateChange={setRecoveryState} />
     </>
   );
