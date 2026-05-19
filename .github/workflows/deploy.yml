@@ -31,27 +31,27 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ inputs.bastion_host || secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
 
       - name: Add Frontend host to known_hosts via Bastion
         run: |
           ssh -o StrictHostKeyChecking=no \
             -i ~/.ssh/id_rsa \
-            ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+            ${{ secrets.BASTION_USER }}@${{ inputs.bastion_host || secrets.BASTION_HOST }} \
             "ssh-keyscan -H ${{ secrets.FRONTEND_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Deploy dist to Frontend Server
         run: |
           ssh -o StrictHostKeyChecking=no \
             -i ~/.ssh/id_rsa \
-            -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+            -J ${{ secrets.BASTION_USER }}@${{ inputs.bastion_host || secrets.BASTION_HOST }} \
             ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }} \
             "sudo mkdir -p /var/www/html && sudo rm -rf /var/www/html/* && sudo chown -R ${{ secrets.FRONTEND_USER }}:${{ secrets.FRONTEND_USER }} /var/www/html"
 
           scp -r \
             -o StrictHostKeyChecking=no \
             -i ~/.ssh/id_rsa \
-            -o ProxyJump=${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+            -o ProxyJump=${{ secrets.BASTION_USER }}@${{ inputs.bastion_host || secrets.BASTION_HOST }} \
             dist/* \
             ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }}:/var/www/html/
 
@@ -59,6 +59,6 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no \
             -i ~/.ssh/id_rsa \
-            -J ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} \
+            -J ${{ secrets.BASTION_USER }}@${{ inputs.bastion_host || secrets.BASTION_HOST }} \
             ${{ secrets.FRONTEND_USER }}@${{ secrets.FRONTEND_HOST }} \
             "sudo nginx -t && sudo systemctl reload nginx"
