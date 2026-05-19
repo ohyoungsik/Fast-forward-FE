@@ -67,6 +67,16 @@ export default function DashboardPage() {
           const next = [...prev, { time: nowTimestamp(), cpu: data.cpu_usage, memory: data.memory_usage, disk: data.disk_usage }];
           return next.length > 15 ? next.slice(-15) : next;
         });
+
+        //  추가 — CPU 50% 초과 시 자동 실행
+        if (data.cpu_usage > 50 && recoveryState === 'idle') {
+          setRecoveryState('running');
+          fetch('http://localhost:8000/api/kill/run', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => setRecoveryState(d.success ? 'done' : 'fail'))
+            .catch(() => setRecoveryState('fail'));
+        }
+
         setError(null);
       } catch {
         if (!cancelled) setError('메트릭 조회 실패. 서버 연결을 확인하세요.');
