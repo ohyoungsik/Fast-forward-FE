@@ -1,3 +1,4 @@
+// cicd test
 export interface MetricsResponse {
   server_name: string;
   cpu_usage: number;
