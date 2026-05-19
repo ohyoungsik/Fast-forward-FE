@@ -13,6 +13,7 @@ import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
 import { getSecurityAccessLogs, type SecurityAccessLogItem } from '../api/security';
 import type { MetricsResponse } from '../types/metrics';
 import type { InfraMetricData, RealTimeLog } from '../types/dashboard';
+import CpuKill from '../components/dashboard/CpuKill';
 
 const LEVEL_COLOR: Record<string, string> = {
   INFO: 'text-blue-400',
@@ -46,7 +47,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [webappLogs, setWebappLogs] = useState<AppLogItem[]>([]);
   const [securityLogs, setSecurityLogs] = useState<SecurityAccessLogItem[]>([]);
-
+  const [recoveryState, setRecoveryState] = useState<'idle'|'running'|'done'|'fail'>('idle');
   useEffect(() => {
     if (!selectedServer) return;
 
@@ -153,7 +154,7 @@ export default function DashboardPage() {
               overrides.unit = net.unit;
             }
           }
-          return <StatusCard key={index} {...card} {...overrides} />;
+          return <StatusCard key={index} {...card} {...overrides} recoveryState={index === 1 ? recoveryState : undefined} />;
         })}
       </section>
 
@@ -212,6 +213,8 @@ export default function DashboardPage() {
           <LogStream logs={streamLogs} />
         </div>
       </section>
+      
+      <CpuKill onStateChange={setRecoveryState} />
     </>
   );
 }
