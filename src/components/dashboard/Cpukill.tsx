@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Loader2, Settings, Check, X } from 'lucide-react';
 
-const API = import.meta.env.VITE_KILL_API_URL as string;
+const API = `${import.meta.env.VITE_KILL_API_URL as string}/system/kill-high-cpu`;
 
 type State = 'idle' | 'running' | 'done' | 'fail';
 
