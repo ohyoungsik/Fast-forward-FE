@@ -35,6 +35,7 @@ export default function CpuMonitorModal({ open, onClose, onKillStateChange }: Pr
       }
     };
     ws.onerror = () => setWsStatus('error');
+    ws.onclose = () => setWsStatus('error');
     wsRef.current = ws;
 
     return () => {
