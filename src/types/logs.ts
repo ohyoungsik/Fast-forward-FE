@@ -1,3 +1,4 @@
+// cicd 테스트 코드
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL';
 
 export type LogRow = {
