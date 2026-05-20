@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Loader2, Settings, Check, X } from 'lucide-react';
 
-const API = 'http://localhost:8000/api/kill/run';
+const API = import.meta.env.VITE_KILL_API_URL as string;
 
 type State = 'idle' | 'running' | 'done' | 'fail';
 

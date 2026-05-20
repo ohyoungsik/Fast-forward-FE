@@ -13,7 +13,7 @@ import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
 import { getSecurityAccessLogs, type SecurityAccessLogItem } from '../api/security';
 import type { MetricsResponse } from '../types/metrics';
 import type { InfraMetricData, RealTimeLog } from '../types/dashboard';
-import CpuKill from '../components/dashboard/CpuKill';
+import CpuKill from '../components/dashboard/Cpukill';
 
 const LEVEL_COLOR: Record<string, string> = {
   INFO: 'text-blue-400',
@@ -71,7 +71,7 @@ export default function DashboardPage() {
         //  추가 — CPU 50% 초과 시 자동 실행
         if (data.cpu_usage > 50 && recoveryState === 'idle') {
           setRecoveryState('running');
-          fetch('http://localhost:8000/api/kill/run', { method: 'POST' })
+          fetch(import.meta.env.VITE_KILL_API_URL as string, { method: 'POST' })
             .then(r => r.json())
             .then(d => setRecoveryState(d.success ? 'done' : 'fail'))
             .catch(() => setRecoveryState('fail'));
