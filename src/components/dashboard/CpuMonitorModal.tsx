@@ -29,7 +29,11 @@ export default function CpuMonitorModal({ open, onClose, onKillStateChange }: Pr
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'process_status') setLog(msg.data);
+        console.log(' msg : ', msg);
+        if (msg.type === 'process_status'){
+          console.log(' data 존재 ?',msg)
+           setLog(msg.data);
+          }
       } catch {
         setLog(event.data);
       }

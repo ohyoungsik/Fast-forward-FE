@@ -4,10 +4,9 @@ import { Link } from 'react-router-dom';
 
 import StatusCard from '../components/dashboard/StatusCard';
 import InfraChart from '../components/dashboard/InfraChart';
-import NginxLogChart from '../components/dashboard/NginxLogChart';
 import LogStream from '../components/dashboard/LogStream';
 import ServerDropdown from '../components/ServerDropdown';
-import { initialStatusCards, initialNginxData } from '../constants/mockData';
+import { initialStatusCards } from '../constants/mockData';
 import { getMetrics } from '../api/metrics';
 import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
 import { getSecurityAccessLogs, type SecurityAccessLogItem } from '../api/security';
@@ -213,13 +212,8 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-4 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl">
-          <h3 className="font-extrabold text-lg tracking-tight mb-6">Nginx Log</h3>
-          <NginxLogChart data={initialNginxData} />
-        </div>
-
-        <div className="lg:col-span-8 bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
+      <section className="grid grid-cols-1 gap-6">
+        <div className="bg-gray-900 p-7 rounded-3xl border border-gray-800 shadow-xl overflow-hidden">
           <h3 className="font-extrabold text-lg tracking-tight mb-6 flex justify-between items-center">
             실시간 로그 스트림 (요약)
             <span className="text-xs text-gray-600 font-normal">15초마다 갱신</span>
