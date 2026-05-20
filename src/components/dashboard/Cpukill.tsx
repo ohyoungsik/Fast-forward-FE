@@ -20,11 +20,14 @@ export default function CpuKill({ onStateChange }: Props) {
     try {
       const res = await fetch(API, { method: 'POST' });
       const data = await res.json();
+      console.log(' if문 시작전 data : ',data)
       if (data.success) {
         setState('done');
         onStateChange?.('done');
+        console.log(' data success 안에 ',data);
         setMessage(data.message || '실행 완료');
       } else {
+        console.log(' data 실패 ', data)
         throw new Error(data.message || '실행 실패');
       }
     } catch (e: any) {
