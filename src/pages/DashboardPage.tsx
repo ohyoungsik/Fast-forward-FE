@@ -13,6 +13,7 @@ import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
 import { getSecurityAccessLogs, type SecurityAccessLogItem } from '../api/security';
 import type { MetricsResponse } from '../types/metrics';
 import type { InfraMetricData, RealTimeLog } from '../types/dashboard';
+import CpuKill from '../components/dashboard/CpuKill';
 
 const LEVEL_COLOR: Record<string, string> = {
   INFO: 'text-blue-400',
@@ -46,7 +47,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [webappLogs, setWebappLogs] = useState<AppLogItem[]>([]);
   const [securityLogs, setSecurityLogs] = useState<SecurityAccessLogItem[]>([]);
-
+  const [recoveryState, setRecoveryState] = useState<'idle'|'running'|'done'|'fail'>('idle');
   useEffect(() => {
     if (!selectedServer) return;
 
@@ -66,6 +67,16 @@ export default function DashboardPage() {
           const next = [...prev, { time: nowTimestamp(), cpu: data.cpu_usage, memory: data.memory_usage, disk: data.disk_usage }];
           return next.length > 15 ? next.slice(-15) : next;
         });
+
+        //  추가 — CPU 50% 초과 시 자동 실행
+        if (data.cpu_usage > 50 && recoveryState === 'idle') {
+          setRecoveryState('running');
+          fetch('http://localhost:8000/api/kill/run', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => setRecoveryState(d.success ? 'done' : 'fail'))
+            .catch(() => setRecoveryState('fail'));
+        }
+
         setError(null);
       } catch {
         if (!cancelled) setError('메트릭 조회 실패. 서버 연결을 확인하세요.');
@@ -153,7 +164,7 @@ export default function DashboardPage() {
               overrides.unit = net.unit;
             }
           }
-          return <StatusCard key={index} {...card} {...overrides} />;
+          return <StatusCard key={index} {...card} {...overrides} recoveryState={index === 1 ? recoveryState : undefined} />;
         })}
       </section>
 
@@ -212,6 +223,8 @@ export default function DashboardPage() {
           <LogStream logs={streamLogs} />
         </div>
       </section>
+
+      <CpuKill onStateChange={setRecoveryState} />
     </>
   );
 }

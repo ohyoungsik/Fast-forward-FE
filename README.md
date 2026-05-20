@@ -1,3 +1,5 @@
+
+=======
 # Fast-Forward 인프라 모니터링 대시보드 (Frontend)
 
 EC2 기반 인프라의 시스템 지표와 각종 로그를 실시간으로 모니터링하는 웹 대시보드입니다.
@@ -45,6 +47,7 @@ VITE_API_BASE_URL=http://<백엔드 IP>/api/v1
 ```bash
 npm install
 npm run dev
+>>>>>>> 4d70b15ca93bf6493f071398087c26d03681bf62
 ```
 
 ### 빌드
