@@ -12,7 +12,7 @@ import { getWebappLogs, type AppLogItem } from '../api/webapp_logs';
 import { getSecurityAccessLogs, type SecurityAccessLogItem } from '../api/security';
 import type { MetricsResponse } from '../types/metrics';
 import type { InfraMetricData, RealTimeLog } from '../types/dashboard';
-import CpuMonitorModal from '../components/dashboard/CpuMonitorModal';
+import { useCpuAlert } from '../context/CpuAlertContext';
 
 const LEVEL_COLOR: Record<string, string> = {
   INFO: 'text-blue-400',
@@ -39,6 +39,7 @@ function toStreamLevel(level: string): RealTimeLog['level'] {
 }
 
 export default function DashboardPage() {
+  const { recoveryState } = useCpuAlert();
   const [selectedServer, setSelectedServer] = useState<string>('');
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [infraData, setInfraData] = useState<InfraMetricData[]>([]);
@@ -46,10 +47,6 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [webappLogs, setWebappLogs] = useState<AppLogItem[]>([]);
   const [securityLogs, setSecurityLogs] = useState<SecurityAccessLogItem[]>([]);
-  const [recoveryState, setRecoveryState] = useState<'idle'|'running'|'done'|'fail'>('idle');
-  const [showAlert, setShowAlert] = useState(false);
-  const [showMonitorModal, setShowMonitorModal] = useState(false);
-  const [ignoredUntil, setIgnoredUntil] = useState<number | null>(null);
 
   useEffect(() => {
     if (!selectedServer) return;
@@ -70,15 +67,6 @@ export default function DashboardPage() {
           const next = [...prev, { time: nowTimestamp(), cpu: data.cpu_usage, memory: data.memory_usage, disk: data.disk_usage }];
           return next.length > 15 ? next.slice(-15) : next;
         });
-
-        if (data.cpu_usage >= 70) {
-          const now = Date.now();
-          setShowAlert((prev) => {
-            if (prev) return prev;
-            if (ignoredUntil && now < ignoredUntil) return false;
-            return true;
-          });
-        }
 
         setError(null);
       } catch {
@@ -222,32 +210,6 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {showAlert && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-4 bg-orange-950/90 border border-orange-700 text-orange-100 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-sm whitespace-nowrap">
-          <div>
-            <p className="font-bold text-sm">CPU 사용률이 70%를 초과했습니다.</p>
-            <p className="text-xs text-orange-400 mt-0.5">현재 {metrics?.cpu_usage.toFixed(1)}% 사용 중</p>
-          </div>
-          <button
-            onClick={() => { setShowAlert(false); setShowMonitorModal(true); }}
-            className="px-3 py-1.5 text-xs font-semibold bg-orange-600 hover:bg-orange-500 rounded-lg transition-colors"
-          >
-            확인하러가기
-          </button>
-          <button
-            onClick={() => { setShowAlert(false); setIgnoredUntil(Date.now() + 5 * 60 * 1000); }}
-            className="px-3 py-1.5 text-xs font-medium bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-gray-300"
-          >
-            무시
-          </button>
-        </div>
-      )}
-
-      <CpuMonitorModal
-        open={showMonitorModal}
-        onClose={() => setShowMonitorModal(false)}
-        onKillStateChange={setRecoveryState}
-      />
     </>
   );
 }
