@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Select-String -Pattern \"README|readme\")",
+      "PowerShell(Get-ChildItem \"d:\\\\baseP_Fast-Forward_Team\\\\project_files\\\\fast-forward-FE\" | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem \"d:\\\\baseP_Fast-Forward_Team\\\\project_files\\\\fast-forward-FE\\\\src\" -Recurse -Directory | ForEach-Object { $_.FullName.Replace\\(\"d:\\\\baseP_Fast-Forward_Team\\\\project_files\\\\fast-forward-FE\\\\src\\\\\", \"src/\"\\) })"
+    ]
+  }
+}
